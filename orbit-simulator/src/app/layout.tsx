@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Orbitron } from "next/font/google";
 import "./globals.css";
-
-const orbitron = Orbitron({ subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
   title: "Orbit Simulator",
@@ -16,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body className={orbitron.className}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

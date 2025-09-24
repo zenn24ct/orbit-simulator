@@ -1,4 +1,5 @@
-"use client";
+"use client"; // ← クライアントコンポーネント
+
 import React, { useRef, useEffect } from "react";
 
 type Planet = {
@@ -6,13 +7,14 @@ type Planet = {
   y: number;
   vx: number;
   vy: number;
+  mass: number;
   radius: number;
   color: string;
 };
 
 type Star = { x: number; y: number };
 
-const OrbitSimulator = () => {
+export default function SimulatorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -24,65 +26,77 @@ const OrbitSimulator = () => {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
-    // 万有引力定数（ゲーム用に調整済み）
-    const G = 0.1;
-    const sunMass = 5000;
+    // 万有引力定数
+    const G = 6.67430e-11;
+    const SUN_MASS = 1.989e30;
 
-    // 惑星データ（位置＋速度）
-    const planets: Planet[] = Array.from({ length: 5 }).map((_, i) => ({
-      x: centerX + (100 + i * 60),
-      y: centerY,
-      vx: 0,
-      vy: 1.5 - i * 0.2, // 初速度（調整すると軌道が変わる）
-      radius: 8 + i * 2,
-      color: `hsl(${i * 70}, 80%, 60%)`,
-    }));
+    // スケーリング
+    const SCALE = 1 / 3e9; // m → px
+    const TIMESTEP = 60 * 60 * 6; // 6時間ごと
 
-    // 星（背景は固定）
-    const stars: Star[] = Array.from({ length: 150 }).map(() => ({
+    // 惑星データ（地球・火星）
+    const planets: Planet[] = [
+      {
+        x: centerX + 1.496e11 * SCALE,
+        y: centerY,
+        vx: 0,
+        vy: -29780 * SCALE, // m/s → px/s
+        mass: 5.972e24,
+        radius: 6,
+        color: "deepskyblue",
+      },
+      {
+        x: centerX + 2.279e11 * SCALE,
+        y: centerY,
+        vx: 0,
+        vy: -24070 * SCALE,
+        mass: 6.39e23,
+        radius: 5,
+        color: "orangered",
+      },
+    ];
+
+    // 背景の星
+    const stars: Star[] = Array.from({ length: 200 }).map(() => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
     }));
 
     const draw = () => {
-      // 背景
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // 星を描画
+      // 背景の星
       ctx.fillStyle = "white";
-      stars.forEach((s) => {
-        ctx.fillRect(s.x, s.y, 2, 2);
-      });
+      stars.forEach((s) => ctx.fillRect(s.x, s.y, 2, 2));
 
       // 太陽
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
       ctx.fillStyle = "yellow";
       ctx.shadowColor = "orange";
       ctx.shadowBlur = 40;
       ctx.fill();
 
-      // 惑星更新
+      // 惑星の更新＆描画
       planets.forEach((p) => {
-        // 太陽から惑星へのベクトル
         const dx = centerX - p.x;
         const dy = centerY - p.y;
-        const distSq = dx * dx + dy * dy;
-        const dist = Math.sqrt(distSq);
+        const distPx = Math.sqrt(dx * dx + dy * dy);
+        const dist = distPx / SCALE; // m
 
-        // 万有引力による加速度
-        const force = (G * sunMass) / distSq;
-        const ax = force * (dx / dist);
-        const ay = force * (dy / dist);
+        // 加速度
+        const accel = (G * SUN_MASS) / (dist * dist); // m/s^2
+        const ax = accel * (dx / distPx);
+        const ay = accel * (dy / distPx);
 
         // 速度更新
-        p.vx += ax;
-        p.vy += ay;
+        p.vx += ax * TIMESTEP * SCALE;
+        p.vy += ay * TIMESTEP * SCALE;
 
         // 位置更新
-        p.x += p.vx;
-        p.y += p.vy;
+        p.x += p.vx * TIMESTEP;
+        p.y += p.vy * TIMESTEP;
 
         // 惑星描画
         ctx.beginPath();
@@ -99,15 +113,11 @@ const OrbitSimulator = () => {
     draw();
   }, []);
 
-  return <canvas ref={canvasRef} className="w-screen h-screen" />;
-};
-
-export default function SimulatorPage() {
   return (
     <main className="relative">
-      <OrbitSimulator />
-      <div className="absolute top-5 left-5 text-cyan-400 text-3xl font-bold drop-shadow-lg">
-        🌌 Orbit Simulator (Gravity)
+      <canvas ref={canvasRef} className="w-screen h-screen" />
+      <div className="absolute top-5 left-5 text-cyan-400 text-2xl font-bold drop-shadow-lg">
+        🌌 Orbit Simulator (Real Physics)
       </div>
     </main>
   );
